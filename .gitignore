@@ -165,3 +165,6 @@ examples/deprecated/*
 workflow/.snakemake/*
 
 examples/config.py
+
+# vscode settings
+.vscode/*
