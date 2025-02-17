@@ -16,7 +16,6 @@ setup(
         "scipy",
         "scikit-learn",
         "biopython",
-        "tqdm",
         "matplotlib",
         "seaborn",
         "plotly",

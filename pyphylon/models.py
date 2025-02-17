@@ -13,7 +13,6 @@ from pyexpat import model
 from sklearn.cluster import KMeans
 from sklearn.decomposition import NMF
 from sklearn.metrics import confusion_matrix, silhouette_score
-from tqdm.notebook import tqdm, trange
 from umap import UMAP
 
 from pyphylon.util import _get_normalization_diagonals
@@ -96,7 +95,7 @@ def run_nmf(data: Union[np.ndarray, pd.DataFrame], ranks: List[int], max_iter: i
 
     # Run NMF at varying ranks
     logger.info(f"Starting NMF process for {len(ranks)} ranks")
-    for rank in tqdm(ranks, desc="Running NMF at varying ranks..."):
+    for rank in ranks:
         model = NMF(n_components=rank, init="nndsvd", max_iter=max_iter, random_state=42)
 
         logger.debug(f"Fitting NMF model for rank {rank}")
@@ -125,7 +124,7 @@ def normalize_nmf_outputs(
     - A_norm_dict: Normalized A matrices.
     """
     L_norm_dict, A_norm_dict = {}, {}
-    for rank, W in tqdm(W_dict.items(), desc="Normalizing matrices..."):
+    for rank, W in W_dict.items():
         try:
             H = H_dict[rank]
             D1, D2 = _get_normalization_diagonals(pd.DataFrame(W))
@@ -152,7 +151,7 @@ def binarize_nmf_outputs(L_norm_dict, A_norm_dict):
     - A_binarized_dict: Binarized A matrices.
     """
     L_binarized_dict, A_binarized_dict = {}, {}
-    for rank in tqdm(L_norm_dict, desc="Binarizing matrices..."):
+    for rank in L_norm_dict:
         L_binarized_dict[rank] = _k_means_binarize_L(L_norm_dict[rank])
         A_binarized_dict[rank] = _k_means_binarize_A(A_norm_dict[rank])
     return L_binarized_dict, A_binarized_dict
@@ -166,7 +165,7 @@ def generate_nmf_reconstructions(data, L_binarized_dict, A_binarized_dict):
     P_error_dict = {}
     P_confusion_dict = {}
 
-    for rank in tqdm(L_binarized_dict, desc="Evaluating model reconstructions..."):
+    for rank in L_binarized_dict:
         reconstr, err, confusion = _calculate_nmf_reconstruction(data, L_binarized_dict[rank], A_binarized_dict[rank])
 
         P_reconstructed_dict[rank] = reconstr
@@ -183,7 +182,7 @@ def calculate_nmf_reconstruction_metrics(P_reconstructed_dict, P_confusion_dict)
     """
     df_metrics = pd.DataFrame()
 
-    for rank in tqdm(P_reconstructed_dict, desc="Tabulating metrics..."):
+    for rank in P_reconstructed_dict:
         df_metrics[rank] = _calculate_metrics(P_confusion_dict[rank], P_reconstructed_dict[rank], rank)
 
     df_metrics = df_metrics.T
@@ -275,8 +274,8 @@ def run_hdbscan(
     models_df = pd.DataFrame(index=index, columns=["model", "labels", "relative_validity", "silhouette_score"])
 
     # Iterate over combinations of min_cluster_size and min_samples
-    for min_cluster_size in tqdm(min_cluster_sizes, desc="Tuning over min. cluster sizes"):
-        for min_samples in tqdm(min_samples_range, desc="Tuning over min. sample sizes", leave=False):
+    for min_cluster_size in min_cluster_sizes:
+        for min_samples in min_samples_range:
             clusterer = HDBSCAN(
                 min_cluster_size=min_cluster_size,
                 min_samples=min_samples,
@@ -712,7 +711,7 @@ def _k_means_binarize_L(L_norm):
     L_binarized = np.zeros_like(L_norm.values)
 
     # Loop through each column
-    for col_idx in trange(L_norm.values.shape[1], leave=False, desc="binarizing column by column..."):
+    for col_idx in range(L_norm.values.shape[1], leave=False, desc="binarizing column by column..."):
         column_data = L_norm.values[:, col_idx]
 
         # Reshape the column data to fit the KMeans input shape
@@ -746,7 +745,7 @@ def _k_means_binarize_A(A_norm):
     A_binarized = np.zeros_like(A_norm.values)
 
     # Loop through each row
-    for row_idx in trange(A_norm.values.shape[0], leave=False, desc="binarizing row by row..."):
+    for row_idx in range(A_norm.values.shape[0], leave=False, desc="binarizing row by row..."):
         row_data = A_norm.values[row_idx, :]
 
         # Reshape the row data to fit the KMeans input shape

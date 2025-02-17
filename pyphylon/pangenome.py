@@ -14,7 +14,6 @@ import urllib.request
 import numpy as np
 import pandas as pd
 import scipy.sparse
-from tqdm.notebook import tqdm
 
 CLUSTER_TYPES = {"cds": "C", "noncoding": "T"}
 VARIANT_TYPES = {"allele": "A", "upstream": "U", "downstream": "D"}
@@ -621,7 +620,7 @@ def rename_genes_and_alleles(
     max_cluster = 0
     with open(feature_names_out, "w+") as f_naming:
         with open(clstr_file, "r") as f_clstr:
-            for line in tqdm(f_clstr):
+            for line in f_clstr:
                 if line[0] == ">":  # starting new gene cluster
                     cluster_num = line.split()[-1].strip()  # cluster number as string
                     max_cluster = cluster_num
@@ -643,7 +642,7 @@ def rename_genes_and_alleles(
         with open(nr_fasta_out + ".tmp", "w+") as f_fasta_new:
             """Iterate through alleles in cluster/allele order"""
             missing = True  # if currently in a sequence without a header
-            for line in tqdm(f_fasta_old):
+            for line in f_fasta_old:
                 if line[0] == ">":  # writing updated header line
                     allele_header = line[1:].strip()
                     if allele_header in header_to_allele:
@@ -727,7 +726,7 @@ def build_genetic_feature_tables(
     print("Sorting clusters...")
     gene_order = []
     last_gene = None
-    for allele in tqdm(allele_order):
+    for allele in allele_order:
         gene = __get_gene_from_allele__(allele)
         if gene != last_gene:
             gene_order.append(gene)
@@ -2352,8 +2351,6 @@ def estimate_pan_core_size(df_genes, num_iter=10, log_batch=1):
     """
     Computes pan/core genome size curves for many randomizations
     """
-    from tqdm import trange
-
     num_genes, num_strains = df_genes.shape
 
     # gene_data = sparse_arrays_to_sparse_matrix(df_genes)
@@ -2368,7 +2365,7 @@ def estimate_pan_core_size(df_genes, num_iter=10, log_batch=1):
     rare_genomes = np.zeros((num_iter, num_strains))  # estimated rare-genome curve per iteration
 
     """ Simulate pan/core-genomes for randomly ordered strains """
-    for i in trange(num_iter):
+    for i in range(num_iter):
         if (i + 1) % log_batch == 0:
             print("Iteration", i + 1, "of", num_iter)
         shuffle_indices = np.arange(num_strains)

@@ -10,7 +10,6 @@ import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 from IPython.display import HTML, display
-from tqdm.notebook import tqdm, trange
 
 
 def _get_attr(attributes, attr_id, ignore=False):
@@ -155,7 +154,7 @@ def generate_strain_vectors(path_to_data, metadata):
 
     strain_vectors = {}
 
-    for strain in tqdm(metadata.genome_id):
+    for strain in metadata.genome_id:
         try:
             DF_gff, size, oric = gff2pandas(f"{path_to_data}/processed/bakta/{strain}/{strain}.gff3")
 

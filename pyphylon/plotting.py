@@ -14,7 +14,6 @@ import pandas as pd
 import plotly.graph_objects as go
 from IPython.display import HTML, display
 from plotly.subplots import make_subplots
-from tqdm.notebook import tqdm, trange
 
 anchor_gene_color = "#6495ED"
 background_gene_color = "#F0F0F0"
