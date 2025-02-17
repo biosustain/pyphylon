@@ -3,17 +3,18 @@ Functions for quality control and quality assurance of genomic data.
 """
 
 import os
+
 import numpy as np
 import pandas as pd
 from kneebow.rotor import Rotor
 
-
 # Main filtration workflow methods
+
 
 def filter_by_species(summary, species_name):
     """
     Filter the summary DataFrame for a specific species.
-    
+
     Parameters:
     - summary (pd.DataFrame): DataFrame containing genome summary data.
     - species_name (str): The name of the species to filter by.
@@ -22,12 +23,12 @@ def filter_by_species(summary, species_name):
     - pd.DataFrame: Filtered DataFrame containing only the specified species.
     """
     species_summary = summary[summary["genome_name"].str.contains(species_name)]
-    species_summary = species_summary.dropna(subset=['genome_length'])
-    species_summary = species_summary.dropna(subset=['patric_cds'])
-    
+    species_summary = species_summary.dropna(subset=["genome_length"])
+    species_summary = species_summary.dropna(subset=["patric_cds"])
+
     # Ensure genome_length and patric_cds are ints
-    species_summary['genome_length'] = species_summary['genome_length'].astype('int')
-    species_summary['patric_cds'] = species_summary['patric_cds'].astype('int')
+    species_summary["genome_length"] = species_summary["genome_length"].astype("int")
+    species_summary["patric_cds"] = species_summary["patric_cds"].astype("int")
 
     return species_summary
 
@@ -55,55 +56,64 @@ def filter_by_genome_quality(
     - pd.DataFrame: Filtered DataFrame containing high-quality genomes.
     - pd.DataFrame (optional): Filtration statistics if return_stats=True.
     """
-    
-    species_complete_summary = species_summary[species_summary.genome_status == 'Complete']
-    species_wgs_summary = species_summary[species_summary.genome_status == 'WGS']
+
+    species_complete_summary = species_summary[species_summary.genome_status == "Complete"]
+    species_wgs_summary = species_summary[species_summary.genome_status == "WGS"]
 
     # Record initial lengths (for filtration statistics)
-    filtration_metrics_list = ['prefiltration', 'L50/N50', 'contig_count', 'CheckM_completeness_contamination']
-    filtration_columns = ['initial', 'num_filtered', 'remaining']
+    filtration_metrics_list = ["prefiltration", "L50/N50", "contig_count", "CheckM_completeness_contamination"]
+    filtration_columns = ["initial", "num_filtered", "remaining"]
     df_filtration = pd.DataFrame(index=filtration_metrics_list, columns=filtration_columns)
-    
-    df_filtration.loc['prefiltration', 'initial'] = species_summary.shape[0]
-    df_filtration.loc['prefiltration', 'remaining'] = df_filtration.loc['prefiltration', 'initial']
-    df_filtration.loc['prefiltration', 'num_filtered'] = 0
-    
+
+    df_filtration.loc["prefiltration", "initial"] = species_summary.shape[0]
+    df_filtration.loc["prefiltration", "remaining"] = df_filtration.loc["prefiltration", "initial"]
+    df_filtration.loc["prefiltration", "num_filtered"] = 0
+
     # Filter complete sequences by L50 & N50 score metrics
     species_complete_summary = _filter_l50(species_complete_summary)
     species_complete_summary = _filter_n50(species_complete_summary, min_thresh_n50)
-    
+
     # Record L50 & N50 filtration metrics
-    df_filtration.loc['L50/N50', 'initial'] = df_filtration.loc['prefiltration', 'remaining']
-    df_filtration.loc['L50/N50', 'remaining'] = species_complete_summary.shape[0] + species_wgs_summary.shape[0]
-    df_filtration.loc['L50/N50', 'num_filtered'] = df_filtration.loc['L50/N50', 'initial'] - df_filtration.loc['L50/N50', 'remaining']
-    
+    df_filtration.loc["L50/N50", "initial"] = df_filtration.loc["prefiltration", "remaining"]
+    df_filtration.loc["L50/N50", "remaining"] = species_complete_summary.shape[0] + species_wgs_summary.shape[0]
+    df_filtration.loc["L50/N50", "num_filtered"] = (
+        df_filtration.loc["L50/N50", "initial"] - df_filtration.loc["L50/N50", "remaining"]
+    )
+
     # Filter other WGS sequences by contig count
     species_wgs_summary = _filter_by_contig(species_wgs_summary, max_contig)
-    
+
     # Record contig count filtration metrics
-    df_filtration.loc['contig_count', 'initial'] = df_filtration.loc['L50/N50', 'remaining']
-    df_filtration.loc['contig_count', 'remaining'] = species_complete_summary.shape[0] + species_wgs_summary.shape[0]
-    df_filtration.loc['contig_count', 'num_filtered'] = df_filtration.loc['contig_count', 'initial'] - df_filtration.loc['contig_count', 'remaining']
-    
+    df_filtration.loc["contig_count", "initial"] = df_filtration.loc["L50/N50", "remaining"]
+    df_filtration.loc["contig_count", "remaining"] = species_complete_summary.shape[0] + species_wgs_summary.shape[0]
+    df_filtration.loc["contig_count", "num_filtered"] = (
+        df_filtration.loc["contig_count", "initial"] - df_filtration.loc["contig_count", "remaining"]
+    )
+
     # Further filter other WGS sequences by CheckM contamination & completeness score metrics
     species_wgs_summary = _filter_checkM_contamination(species_wgs_summary, contamination_cutoff)
     species_wgs_summary = _filter_checkM_completeness(species_wgs_summary, completeness_cutoff)
 
-    df_filtration.loc['CheckM_completeness_contamination', 'initial'] = df_filtration.loc['contig_count', 'remaining']
-    df_filtration.loc['CheckM_completeness_contamination', 'remaining'] = species_complete_summary.shape[0] + species_wgs_summary.shape[0]
-    df_filtration.loc['CheckM_completeness_contamination', 'num_filtered'] = df_filtration.loc['CheckM_completeness_contamination', 'initial'] - df_filtration.loc['CheckM_completeness_contamination', 'remaining']
-    
+    df_filtration.loc["CheckM_completeness_contamination", "initial"] = df_filtration.loc["contig_count", "remaining"]
+    df_filtration.loc["CheckM_completeness_contamination", "remaining"] = (
+        species_complete_summary.shape[0] + species_wgs_summary.shape[0]
+    )
+    df_filtration.loc["CheckM_completeness_contamination", "num_filtered"] = (
+        df_filtration.loc["CheckM_completeness_contamination", "initial"]
+        - df_filtration.loc["CheckM_completeness_contamination", "remaining"]
+    )
+
     # Merge complete sequences and WGS sequences metadata
     filtered_species_summary = pd.concat([species_complete_summary, species_wgs_summary])
 
     # Typecast relevant columns as numeric
-    filtered_species_summary['contig_l50'] = filtered_species_summary['contig_l50'].astype('int')
-    filtered_species_summary['contig_n50'] = filtered_species_summary['contig_l50'].astype('int')
-    filtered_species_summary['contigs'] = filtered_species_summary['contigs'].astype('int')
-    filtered_species_summary['checkm_contamination'] = filtered_species_summary['checkm_contamination'].astype('float')
-    filtered_species_summary['checkm_completeness'] = filtered_species_summary['checkm_completeness'].astype('float')
-    filtered_species_summary['gc_content'] = filtered_species_summary['gc_content'].astype('float')
-    
+    filtered_species_summary["contig_l50"] = filtered_species_summary["contig_l50"].astype("int")
+    filtered_species_summary["contig_n50"] = filtered_species_summary["contig_l50"].astype("int")
+    filtered_species_summary["contigs"] = filtered_species_summary["contigs"].astype("int")
+    filtered_species_summary["checkm_contamination"] = filtered_species_summary["checkm_contamination"].astype("float")
+    filtered_species_summary["checkm_completeness"] = filtered_species_summary["checkm_completeness"].astype("float")
+    filtered_species_summary["gc_content"] = filtered_species_summary["gc_content"].astype("float")
+
     if return_stats:
         return filtered_species_summary, df_filtration
     else:
@@ -111,6 +121,7 @@ def filter_by_genome_quality(
 
 
 # Individual filtration functions
+
 
 def _filter_l50(species_complete_summary, l50_score=1):
     """
@@ -123,10 +134,10 @@ def _filter_l50(species_complete_summary, l50_score=1):
     Returns:
     - pd.DataFrame: Filtered DataFrame with genomes having the specified L50 score.
     """
-    species_complete_summary = species_complete_summary.dropna(subset=['contig_l50'])
-    species_complete_summary['contig_l50'] = species_complete_summary['contig_l50'].astype('int')
-    
-    good_l50 = species_complete_summary['contig_l50'] == l50_score
+    species_complete_summary = species_complete_summary.dropna(subset=["contig_l50"])
+    species_complete_summary["contig_l50"] = species_complete_summary["contig_l50"].astype("int")
+
+    good_l50 = species_complete_summary["contig_l50"] == l50_score
     species_complete_summary = species_complete_summary[good_l50]
 
     return species_complete_summary
@@ -143,13 +154,13 @@ def _filter_n50(species_complete_summary, min_thresh_n50):
     Returns:
     - pd.DataFrame: Filtered DataFrame with genomes having N50 scores above the threshold.
     """
-    species_complete_summary = species_complete_summary.dropna(subset=['contig_n50'])
-    species_complete_summary['contig_n50'] = species_complete_summary['contig_n50'].astype('int')
-    
+    species_complete_summary = species_complete_summary.dropna(subset=["contig_n50"])
+    species_complete_summary["contig_n50"] = species_complete_summary["contig_n50"].astype("int")
+
     if min_thresh_n50:
-        cond = species_complete_summary['contig_n50'] > min_thresh_n50
+        cond = species_complete_summary["contig_n50"] > min_thresh_n50
         species_complete_summary = species_complete_summary[cond]
-    
+
     return species_complete_summary
 
 
@@ -164,11 +175,11 @@ def _filter_by_contig(species_wgs_summary, max_contig):
     Returns:
     - pd.DataFrame: Filtered DataFrame with genomes having contig counts below the threshold.
     """
-    species_wgs_summary = species_wgs_summary.dropna(subset=['contigs'])
-    species_wgs_summary['contigs'] = species_wgs_summary['contigs'].astype('int')
-    
+    species_wgs_summary = species_wgs_summary.dropna(subset=["contigs"])
+    species_wgs_summary["contigs"] = species_wgs_summary["contigs"].astype("int")
+
     if max_contig:
-        species_wgs_summary = species_wgs_summary[species_wgs_summary['contigs'] <= max_contig]
+        species_wgs_summary = species_wgs_summary[species_wgs_summary["contigs"] <= max_contig]
     else:
         species_wgs_summary = _remove_contig_outliers(species_wgs_summary)
 
@@ -186,18 +197,18 @@ def _filter_checkM_contamination(species_wgs_summary, contamination_cutoff):
     Returns:
     - pd.DataFrame: Filtered DataFrame with genomes having contamination scores below the cutoff.
     """
-    species_wgs_summary = species_wgs_summary.dropna(subset=['checkm_contamination'])
-    float_values = species_wgs_summary['checkm_contamination'].copy().astype('float')
-    species_wgs_summary.loc[:,'checkm_contamination'] = float_values
-    
+    species_wgs_summary = species_wgs_summary.dropna(subset=["checkm_contamination"])
+    float_values = species_wgs_summary["checkm_contamination"].copy().astype("float")
+    species_wgs_summary.loc[:, "checkm_contamination"] = float_values
+
     if contamination_cutoff:
-        cond = species_wgs_summary['checkm_contamination'] < contamination_cutoff
+        cond = species_wgs_summary["checkm_contamination"] < contamination_cutoff
     else:
-        kneebow_cutoff = _get_kneebow_cutoff(species_wgs_summary, column='checkm_contamination', curve='elbow')
-        cond = species_wgs_summary['checkm_contamination'] < kneebow_cutoff
-    
+        kneebow_cutoff = _get_kneebow_cutoff(species_wgs_summary, column="checkm_contamination", curve="elbow")
+        cond = species_wgs_summary["checkm_contamination"] < kneebow_cutoff
+
     species_wgs_summary = species_wgs_summary[cond]
-    
+
     return species_wgs_summary
 
 
@@ -212,21 +223,22 @@ def _filter_checkM_completeness(species_wgs_summary, completeness_cutoff):
     Returns:
     - pd.DataFrame: Filtered DataFrame with genomes having completeness scores above the cutoff.
     """
-    species_wgs_summary = species_wgs_summary.dropna(subset=['checkm_completeness'])
-    species_wgs_summary['checkm_completeness'] = species_wgs_summary['checkm_completeness'].astype('float')
-    
+    species_wgs_summary = species_wgs_summary.dropna(subset=["checkm_completeness"])
+    species_wgs_summary["checkm_completeness"] = species_wgs_summary["checkm_completeness"].astype("float")
+
     if completeness_cutoff:
-        cond = species_wgs_summary['checkm_completeness'] > completeness_cutoff
+        cond = species_wgs_summary["checkm_completeness"] > completeness_cutoff
     else:
-        kneebow_cutoff = _get_kneebow_cutoff(species_wgs_summary, column='checkm_completeness', curve='knee')
-        cond = species_wgs_summary['checkm_completeness'] > kneebow_cutoff
-    
+        kneebow_cutoff = _get_kneebow_cutoff(species_wgs_summary, column="checkm_completeness", curve="knee")
+        cond = species_wgs_summary["checkm_completeness"] > kneebow_cutoff
+
     species_wgs_summary = species_wgs_summary[cond]
-    
+
     return species_wgs_summary
 
 
 # Helper functions
+
 
 def _remove_contig_outliers(species_wgs_summary):
     """
@@ -239,24 +251,24 @@ def _remove_contig_outliers(species_wgs_summary):
     - pd.DataFrame: Filtered DataFrame with outliers removed.
     """
     df = species_wgs_summary.copy()
-    
+
     # Step 1: Calculate the IQR
-    Q1 = df['contigs'].quantile(0.25)
-    Q3 = df['contigs'].quantile(0.75)
+    Q1 = df["contigs"].quantile(0.25)
+    Q3 = df["contigs"].quantile(0.75)
     IQR = Q3 - Q1
-    
+
     # Step 2: Find the upper fence
     upper_fence = Q3 + 1.5 * IQR
 
     # Step 3: Remove all entries above upper fence limit (clear outliers)
-    outlier_cond = species_wgs_summary['contigs'] <= upper_fence
+    outlier_cond = species_wgs_summary["contigs"] <= upper_fence
     species_wgs_summary = species_wgs_summary[outlier_cond]
-    
+
     # Step 4: Remove all entries > 2.5 * median of remaining values
-    upper_limit_median = 2.5 * species_wgs_summary['contigs'].median()
-    outlier_cond2 = species_wgs_summary['contigs'] <= upper_limit_median
+    upper_limit_median = 2.5 * species_wgs_summary["contigs"].median()
+    outlier_cond2 = species_wgs_summary["contigs"] <= upper_limit_median
     species_wgs_summary = species_wgs_summary[outlier_cond2]
-    
+
     return species_wgs_summary
 
 
@@ -274,28 +286,28 @@ def _get_kneebow_cutoff(species_wgs_summary, column, curve):
     """
     df = species_wgs_summary.copy()
 
-    if curve.lower() == 'elbow':
+    if curve.lower() == "elbow":
         df = df.sort_values(by=column, ascending=True)
-    elif curve.lower() == 'knee':
+    elif curve.lower() == "knee":
         df = df.sort_values(by=column, ascending=False)
     else:
         raise ValueError(f'curve must be either "elbow" or "knee". {curve} was provided instead.')
-    
+
     df = df.reset_index()
-    
+
     results_itr = zip(list(df.index), list(df[column]))
     data = list(results_itr)
-    
+
     rotor = Rotor()
     rotor.fit_rotate(data)
-    
-    if curve.lower() == 'elbow':
+
+    if curve.lower() == "elbow":
         elbow_idx = rotor.get_elbow_index()
         kneebow_cutoff = df[column][elbow_idx]
-    elif curve.lower() == 'knee':
+    elif curve.lower() == "knee":
         knee_idx = rotor.get_knee_index()
         kneebow_cutoff = df[column][knee_idx]
-    
+
     return kneebow_cutoff
 
 
@@ -312,11 +324,11 @@ def append_entry(df_filtration, entry_name, entry_remaining):
     - pd.DataFrame: Updated filtration statistics DataFrame.
     """
     df_temp = pd.DataFrame(index=[entry_name], columns=df_filtration.columns)
-    
-    df_temp.loc[entry_name, 'initial'] = df_filtration.iloc[-1]['remaining']
-    df_temp.loc[entry_name, 'remaining'] = entry_remaining
-    df_temp.loc[entry_name, 'num_filtered'] = df_temp.loc[entry_name, 'initial'] - df_temp.loc[entry_name, 'remaining']
-    
+
+    df_temp.loc[entry_name, "initial"] = df_filtration.iloc[-1]["remaining"]
+    df_temp.loc[entry_name, "remaining"] = entry_remaining
+    df_temp.loc[entry_name, "num_filtered"] = df_temp.loc[entry_name, "initial"] - df_temp.loc[entry_name, "remaining"]
+
     df_filtration = pd.concat([df_filtration, df_temp])
 
     return df_filtration

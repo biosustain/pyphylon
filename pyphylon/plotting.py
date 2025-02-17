@@ -1,27 +1,26 @@
+import gzip
+import itertools
 import logging
+import multiprocessing
+import pickle
 import re
 import urllib
 from io import StringIO
-import pandas as pd
-import numpy as np
+
 import matplotlib
 import matplotlib.pyplot as plt
-import gzip
-import pickle
-from tqdm.notebook import tqdm, trange
-import multiprocessing
-from IPython.display import display, HTML
-import itertools
-
+import numpy as np
+import pandas as pd
 import plotly.graph_objects as go
+from IPython.display import HTML, display
 from plotly.subplots import make_subplots
+from tqdm.notebook import tqdm, trange
 
-
-anchor_gene_color = '#6495ED'
-background_gene_color = '#F0F0F0'
-phylon_gene_location = '#FF7F50'
-Normal_Order_color = '#C6EBC5'
-Inversion_Color = '#FA7070'
+anchor_gene_color = "#6495ED"
+background_gene_color = "#F0F0F0"
+phylon_gene_location = "#FF7F50"
+Normal_Order_color = "#C6EBC5"
+Inversion_Color = "#FA7070"
 
 
 def plot_gene_sets_with_common_subset_proportional(gene_lists, common_subset, strain_names, X, Y):
@@ -35,65 +34,87 @@ def plot_gene_sets_with_common_subset_proportional(gene_lists, common_subset, st
     max_length = max(len(gene_list) for gene_list in gene_lists)  # Used for red lines
 
     # Add a bar for legend for each color once
-    fig.add_trace(go.Bar(
-        x=[0], y=[0], marker_color='black', name='Phylon', showlegend=True
-    ))
-    fig.add_trace(go.Bar(
-        x=[0], y=[0], marker_color='lightgrey', name='Other Genes', showlegend=True
-    ))
-    
+    fig.add_trace(go.Bar(x=[0], y=[0], marker_color="black", name="Phylon", showlegend=True))
+    fig.add_trace(go.Bar(x=[0], y=[0], marker_color="lightgrey", name="Other Genes", showlegend=True))
+
     # Plot each gene list in its own subplot
     for index, gene_list in enumerate(gene_lists, start=1):
         # Normalize x_values to use full width of subplot by distributing genes evenly
         x_values = [i * (max_length - 1) / (max(len(gene_list) - 1, 1)) for i in range(len(gene_list))]
         # Colors based on membership in the common subset
-        colors = ['black' if gene in common_subset else 'lightgrey' for gene in gene_list]
+        colors = ["black" if gene in common_subset else "lightgrey" for gene in gene_list]
 
         # Add bars with calculated x positions
-        fig.add_trace(go.Bar(
-            x=x_values,
-            y=[1] * len(gene_list),
-            marker_color=colors,
-            width=0.9,  # Adjust the width to fit within subplot without touching red lines
-            showlegend=False
-        ), row=index, col=1)
+        fig.add_trace(
+            go.Bar(
+                x=x_values,
+                y=[1] * len(gene_list),
+                marker_color=colors,
+                width=0.9,  # Adjust the width to fit within subplot without touching red lines
+                showlegend=False,
+            ),
+            row=index,
+            col=1,
+        )
 
     # Add continuous red boundary lines across all subplots
     # Ensure lines are outside the range of x-values used for gene bars
-    fig.add_shape(type="line",
-                  x0=-0.5, y0=0, x1=-0.5, y1=num_plots-(len(gene_lists)-1),  # Start boundary line
-                  line=dict(color="red", width=6),
-                  xref="x", yref="paper")
+    fig.add_shape(
+        type="line",
+        x0=-0.5,
+        y0=0,
+        x1=-0.5,
+        y1=num_plots - (len(gene_lists) - 1),  # Start boundary line
+        line=dict(color="red", width=6),
+        xref="x",
+        yref="paper",
+    )
 
-    
-    fig.add_shape(type="line",
-                  x0=max_length - 0.5, y0=0, x1=max_length - 0.5, y1=num_plots-(len(gene_lists)-1),  # End boundary line
-                  line=dict(color="red", width=6),
-                  xref="x", yref="paper")
-        
-    fig.add_annotation(x=0, y=num_plots-(len(gene_lists)-1)+0.05, xref="paper", yref="paper", font=dict(
-            size=16,
-            color="red"
-            ), text=f"Anchor Gene {X}", showarrow=False)
-    
-    fig.add_annotation(x=1, y=num_plots-(len(gene_lists)-1)+0.05, xref="paper", yref="paper", font=dict(
-            size=16,
-            color="red"
-            ), text=f"Anchor Gene {Y}", showarrow=False)
-    
+    fig.add_shape(
+        type="line",
+        x0=max_length - 0.5,
+        y0=0,
+        x1=max_length - 0.5,
+        y1=num_plots - (len(gene_lists) - 1),  # End boundary line
+        line=dict(color="red", width=6),
+        xref="x",
+        yref="paper",
+    )
+
+    fig.add_annotation(
+        x=0,
+        y=num_plots - (len(gene_lists) - 1) + 0.05,
+        xref="paper",
+        yref="paper",
+        font=dict(size=16, color="red"),
+        text=f"Anchor Gene {X}",
+        showarrow=False,
+    )
+
+    fig.add_annotation(
+        x=1,
+        y=num_plots - (len(gene_lists) - 1) + 0.05,
+        xref="paper",
+        yref="paper",
+        font=dict(size=16, color="red"),
+        text=f"Anchor Gene {Y}",
+        showarrow=False,
+    )
+
     # Update layout for better view
     fig.update_layout(
-        title='',
+        title="",
         xaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
         yaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
         height=300 * num_plots,  # Adjust height based on number of plots
-        bargap=0  # Remove any gap between bars
+        bargap=0,  # Remove any gap between bars
     )
 
     fig.show()
 
 
 import plotly.graph_objects as go
+
 
 def plot_circular_genome_combined_with_eggnog(list1, list2, title, strain, df_eggnog, show_legend=False):
     # Ensure the gene list starts with the number 1
@@ -110,12 +131,12 @@ def plot_circular_genome_combined_with_eggnog(list1, list2, title, strain, df_eg
     # Define the radial range for the bars
     inner_radius = 0.8
     outer_radius = 1.0
-    
+
     outer_gap = 0.1  # Define the gap size between the inner and outer rings
 
     # Adjust base radius to create a gap
     outer_base_radius = outer_radius + outer_gap
-    
+
     # Calculate the height of each bar
     bar_height = outer_radius - inner_radius
 
@@ -138,49 +159,55 @@ def plot_circular_genome_combined_with_eggnog(list1, list2, title, strain, df_eg
     # Create the plot
     fig = go.Figure()
 
-    fig.add_trace(go.Barpolar(
-        r=r_black,
-        theta=angles,
-        width=[360 / num_genes] * num_genes,
-        base=[inner_radius] * num_genes,
-        marker_color=background_gene_color,
-        marker_line_color=background_gene_color,
-        opacity=0.7,
-        name='Genes',
-        text=hover_text,
-        hoverinfo='text',
-        showlegend=show_legend
-    ))
+    fig.add_trace(
+        go.Barpolar(
+            r=r_black,
+            theta=angles,
+            width=[360 / num_genes] * num_genes,
+            base=[inner_radius] * num_genes,
+            marker_color=background_gene_color,
+            marker_line_color=background_gene_color,
+            opacity=0.7,
+            name="Genes",
+            text=hover_text,
+            hoverinfo="text",
+            showlegend=show_legend,
+        )
+    )
 
     # Add blue bars for genes in list2
-    fig.add_trace(go.Barpolar(
-        r=r_blue,
-        theta=angles,
-        width=[360 / num_genes] * num_genes,
-        base=[inner_radius if gene in list2 and not isinstance(gene, int) else 0 for gene in list1],
-        marker_color=phylon_gene_location,
-        marker_line_color=phylon_gene_location,
-        opacity=0.7,
-        name=f'{title} Phylon genes',
-        text=hover_text,
-        hoverinfo='text',
-        showlegend=show_legend
-    ))
+    fig.add_trace(
+        go.Barpolar(
+            r=r_blue,
+            theta=angles,
+            width=[360 / num_genes] * num_genes,
+            base=[inner_radius if gene in list2 and not isinstance(gene, int) else 0 for gene in list1],
+            marker_color=phylon_gene_location,
+            marker_line_color=phylon_gene_location,
+            opacity=0.7,
+            name=f"{title} Phylon genes",
+            text=hover_text,
+            hoverinfo="text",
+            showlegend=show_legend,
+        )
+    )
 
     # Add red bars for anchor genes (integers)
-    fig.add_trace(go.Barpolar(
-        r=r_red,
-        theta=angles,
-        width=[360 / num_genes] * num_genes,
-        base=[inner_radius if isinstance(gene, int) else 0 for gene in list1],
-        marker_color=anchor_gene_color,
-        marker_line_color=anchor_gene_color,
-        opacity=0.7,
-        name='Anchor genes',
-        text=hover_text,
-        hoverinfo='text',
-        showlegend=show_legend
-    ))
+    fig.add_trace(
+        go.Barpolar(
+            r=r_red,
+            theta=angles,
+            width=[360 / num_genes] * num_genes,
+            base=[inner_radius if isinstance(gene, int) else 0 for gene in list1],
+            marker_color=anchor_gene_color,
+            marker_line_color=anchor_gene_color,
+            opacity=0.7,
+            name="Anchor genes",
+            text=hover_text,
+            hoverinfo="text",
+            showlegend=show_legend,
+        )
+    )
 
     # Filter out non-integer genes for the outer ring
     int_genes = [gene for gene in list1 if isinstance(gene, int)]
@@ -217,109 +244,148 @@ def plot_circular_genome_combined_with_eggnog(list1, list2, title, strain, df_eg
             else:
                 outer_colors.append(Inversion_Color)  # Decreasing order
 
-            outer_hover_text.append(f'{current_gene}-{next_gene}')
+            outer_hover_text.append(f"{current_gene}-{next_gene}")
 
-        fig.add_trace(go.Barpolar(
-            r=[bar_height] * num_int_genes,
-            theta=segment_base_angles,
-            width=segment_widths,
-            base=[outer_base_radius] * num_int_genes,
-            marker_color=outer_colors,
-            marker_line_color=outer_colors,
-            opacity=0.7,
-            name='Outer Ring',
-            text=outer_hover_text,
-            hoverinfo='text',
-            showlegend=show_legend
-        ))
+        fig.add_trace(
+            go.Barpolar(
+                r=[bar_height] * num_int_genes,
+                theta=segment_base_angles,
+                width=segment_widths,
+                base=[outer_base_radius] * num_int_genes,
+                marker_color=outer_colors,
+                marker_line_color=outer_colors,
+                opacity=0.7,
+                name="Outer Ring",
+                text=outer_hover_text,
+                hoverinfo="text",
+                showlegend=show_legend,
+            )
+        )
 
     # Update layout to add a white circle in the center
     fig.update_layout(
         polar=dict(
             radialaxis=dict(visible=False, range=[0, outer_base_radius + bar_height]),
             angularaxis=dict(visible=False),
-            bgcolor="white"
+            bgcolor="white",
         ),
         showlegend=show_legend,
-        paper_bgcolor='white',
-        plot_bgcolor='white'
+        paper_bgcolor="white",
+        plot_bgcolor="white",
     )
 
     return fig
 
-def plot_combined_circular_genomes_with_variaton(figures, titles, phylon, figsize=(1500, 500), save_path=None, dpi=300, show = False):
+
+def plot_combined_circular_genomes_with_variaton(
+    figures, titles, phylon, figsize=(1500, 500), save_path=None, dpi=300, show=False
+):
     # Create a subplot layout with 1 row and len(figures) columns
-    fig = make_subplots(rows=1, cols=len(figures), subplot_titles=titles, specs=[[{'type': 'polar'}]*len(figures)])
+    fig = make_subplots(rows=1, cols=len(figures), subplot_titles=titles, specs=[[{"type": "polar"}] * len(figures)])
 
     for i, figure in enumerate(figures):
-        for trace in figure['data']:
+        for trace in figure["data"]:
             trace.showlegend = False  # Hide legend for individual traces
-            fig.add_trace(trace, row=1, col=i+1)
+            fig.add_trace(trace, row=1, col=i + 1)
 
     # Add a single legend manually
-    fig.add_trace(go.Scatterpolar(
-        r=[None], theta=[None], mode='markers', marker=dict(color=background_gene_color, symbol='square', size=12), name='Genes', showlegend=True
-    ))
-    fig.add_trace(go.Scatterpolar(
-        r=[None], theta=[None], mode='markers', marker=dict(color=phylon_gene_location, symbol='square', size=12), name=f'{phylon} Phylon Genes', showlegend=True
-    ))
-    fig.add_trace(go.Scatterpolar(
-        r=[None], theta=[None], mode='markers', marker=dict(color=anchor_gene_color, symbol='square', size=12), name='Anchor Genes', showlegend=True
-    ))
-    
-    fig.add_trace(go.Scatterpolar(
-        r=[None], theta=[None], mode='markers', marker=dict(color='black', symbol='square', size=0), name='', showlegend=True
-    ))
+    fig.add_trace(
+        go.Scatterpolar(
+            r=[None],
+            theta=[None],
+            mode="markers",
+            marker=dict(color=background_gene_color, symbol="square", size=12),
+            name="Genes",
+            showlegend=True,
+        )
+    )
+    fig.add_trace(
+        go.Scatterpolar(
+            r=[None],
+            theta=[None],
+            mode="markers",
+            marker=dict(color=phylon_gene_location, symbol="square", size=12),
+            name=f"{phylon} Phylon Genes",
+            showlegend=True,
+        )
+    )
+    fig.add_trace(
+        go.Scatterpolar(
+            r=[None],
+            theta=[None],
+            mode="markers",
+            marker=dict(color=anchor_gene_color, symbol="square", size=12),
+            name="Anchor Genes",
+            showlegend=True,
+        )
+    )
 
+    fig.add_trace(
+        go.Scatterpolar(
+            r=[None],
+            theta=[None],
+            mode="markers",
+            marker=dict(color="black", symbol="square", size=0),
+            name="",
+            showlegend=True,
+        )
+    )
 
-    fig.add_trace(go.Scatterpolar(
-        r=[None], theta=[None], mode='markers', marker=dict(color=Normal_Order_color, symbol='square', size=12), name='No variation', showlegend=True
-    ))
+    fig.add_trace(
+        go.Scatterpolar(
+            r=[None],
+            theta=[None],
+            mode="markers",
+            marker=dict(color=Normal_Order_color, symbol="square", size=12),
+            name="No variation",
+            showlegend=True,
+        )
+    )
 
-    fig.add_trace(go.Scatterpolar(
-        r=[None], theta=[None], mode='markers', marker=dict(color=Inversion_Color, symbol='square', size=12), name='Inversion', showlegend=True
-    ))
+    fig.add_trace(
+        go.Scatterpolar(
+            r=[None],
+            theta=[None],
+            mode="markers",
+            marker=dict(color=Inversion_Color, symbol="square", size=12),
+            name="Inversion",
+            showlegend=True,
+        )
+    )
     # Update the layout
     fig.update_layout(
-        title = f'{phylon} Phylon Location',
+        title=f"{phylon} Phylon Location",
         showlegend=True,
         legend=dict(x=1.1, y=0.65),  # Position the legend to the right of the last subplot
         width=figsize[0],
         height=figsize[1],
-        paper_bgcolor='white',
-        font=dict(
-            size=14  # Adjust the font size as needed
-        ),
-        plot_bgcolor='white'
+        paper_bgcolor="white",
+        font=dict(size=14),  # Adjust the font size as needed
+        plot_bgcolor="white",
     )
 
     # Update each subplot individually to hide the angular axis and make the center white
     for i in range(1, len(figures) + 1):
-        fig.update_polars(
-            radialaxis=dict(visible=False),
-            angularaxis=dict(visible=False),
-            bgcolor="white"
-        )
-        
+        fig.update_polars(radialaxis=dict(visible=False), angularaxis=dict(visible=False), bgcolor="white")
+
     if save_path:
         fig.write_html(save_path)
     if show:
         fig.show()
 
 
-def histogram_possible_location(df, column, title='Histogram', size=(10, 6), dpi=300, bins=6):
+def histogram_possible_location(df, column, title="Histogram", size=(10, 6), dpi=300, bins=6):
     plt.figure(figsize=size, dpi=dpi)
-    
+
     # Compute the histogram and bins
-    counts, bin_edges, _ = plt.hist(df[column], bins=bins, edgecolor='black')
-    
+    counts, bin_edges, _ = plt.hist(df[column], bins=bins, edgecolor="black")
+
     # Set x-axis ticks to the center of each bin
     bin_centers = 0.5 * (bin_edges[:-1] + bin_edges[1:])
     plt.xticks(bin_centers, labels=np.round(bin_centers).astype(int))
-    
+
     plt.title(title)
     plt.xlabel(column)
-    plt.ylabel('Frequency')
+    plt.ylabel("Frequency")
     plt.grid(False)
     plt.show()
-

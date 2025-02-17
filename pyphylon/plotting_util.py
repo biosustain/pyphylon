@@ -1,16 +1,16 @@
+import gzip
 import logging
+import pickle
 import re
 from io import StringIO
-import pandas as pd
-import numpy as np
+
 import matplotlib
 import matplotlib.pyplot as plt
-import gzip
-import pickle
-from tqdm.notebook import tqdm, trange
-from IPython.display import display, HTML
+import numpy as np
+import pandas as pd
 import plotly.graph_objects as go
-
+from IPython.display import HTML, display
+from tqdm.notebook import tqdm, trange
 
 
 def _get_attr(attributes, attr_id, ignore=False):
@@ -40,7 +40,9 @@ def _get_attr(attributes, attr_id, ignore=False):
         else:
             raise ValueError("{} not in attributes: {}".format(attr_id, attributes))
 
+
 # Need to be updated for seperation of plasmid/chromosome
+
 
 def gff2pandas(gff_file, feature=["CDS"], index=None):
     """
@@ -90,7 +92,7 @@ def gff2pandas(gff_file, feature=["CDS"], index=None):
         ]
         DF_gff = pd.read_csv(gff, sep="\t", skiprows=skiprow, names=names, header=None, low_memory=False)
 
-        region = DF_gff[DF_gff.feature == 'region']
+        region = DF_gff[DF_gff.feature == "region"]
         region_len = int(region.iloc[0].end)
 
         oric = 0
@@ -98,7 +100,7 @@ def gff2pandas(gff_file, feature=["CDS"], index=None):
         #     oric = list(DF_gff[DF_gff.feature == 'oriC'].start)[0]
         # except:
         #     oric = [0]
-        
+
         # Filter for CDSs
         DF_cds = DF_gff[DF_gff.feature.isin(feature)]
 
@@ -118,7 +120,8 @@ def gff2pandas(gff_file, feature=["CDS"], index=None):
             DF_gff = DF_gff.drop_duplicates(index)
         DF_gff.set_index("locus_tag", drop=True, inplace=True)
 
-    return DF_gff[['start', 'end', 'locus_tag']], region_len, oric
+    return DF_gff[["start", "end", "locus_tag"]], region_len, oric
+
 
 def h2a(x, header_to_allele):
     """
@@ -132,10 +135,11 @@ def h2a(x, header_to_allele):
     str or None: Transformed locus tag prefixed with 'A', or None if an error occurs.
     """
     try:
-        return 'A' + header_to_allele[x].split('A')[1]
+        return "A" + header_to_allele[x].split("A")[1]
     except:
         return None
-    
+
+
 def generate_strain_vectors(path_to_data, metadata):
     """
     Generates a dictionary of gene orders for each strain based on GFF3 files.
@@ -150,20 +154,21 @@ def generate_strain_vectors(path_to_data, metadata):
     """
 
     strain_vectors = {}
-    
+
     for strain in tqdm(metadata.genome_id):
         try:
-            DF_gff, size, oric = gff2pandas(f'{path_to_data}/processed/bakta/{strain}/{strain}.gff3')
+            DF_gff, size, oric = gff2pandas(f"{path_to_data}/processed/bakta/{strain}/{strain}.gff3")
 
-            DF_gff['gene'] = DF_gff.locus_tag.apply(lambda x: h2a(x))
-            DF_gff = DF_gff[['gene', 'start']]
-            gene_order = DF_gff.sort_values('start').gene.to_list()
+            DF_gff["gene"] = DF_gff.locus_tag.apply(lambda x: h2a(x))
+            DF_gff = DF_gff[["gene", "start"]]
+            gene_order = DF_gff.sort_values("start").gene.to_list()
 
             strain_vectors[strain] = gene_order
         except Exception as e:
             print(f"Error processing strain {strain}: {e}")
 
     return strain_vectors
+
 
 def plot_gene_length_distribution(strain_vectors):
     """
@@ -177,15 +182,16 @@ def plot_gene_length_distribution(strain_vectors):
     gene_lengths = [len(genes) for genes in strain_vectors.values()]
 
     # Creating the histogram
-    plt.hist(gene_lengths, bins=10, color='blue', edgecolor='black')
+    plt.hist(gene_lengths, bins=10, color="blue", edgecolor="black")
 
     # Adding titles and labels
-    plt.title('Distribution of Gene Lengths')
-    plt.xlabel('Gene Length')
-    plt.ylabel('Frequency')
+    plt.title("Distribution of Gene Lengths")
+    plt.xlabel("Gene Length")
+    plt.ylabel("Frequency")
 
     # Display the histogram
     plt.show()
+
 
 def count_common_gene_appearances(strain_vectors):
     """
@@ -205,7 +211,7 @@ def count_common_gene_appearances(strain_vectors):
     # Find intersection of genes in all strains to get common genes
     for genes in strain_vectors.values():
         common_genes.intersection_update(genes)
-    
+
     # Prepare data for DataFrame: count occurrences of each common gene in each strain
     data = {gene: [] for gene in common_genes}
     strains = []
@@ -215,11 +221,12 @@ def count_common_gene_appearances(strain_vectors):
         gene_count = {gene: genes.count(gene) for gene in common_genes}
         for gene in common_genes:
             data[gene].append(gene_count[gene])
-    
+
     # Create the DataFrame
     df = pd.DataFrame(data, index=strains)
-    
+
     return df
+
 
 def find_once_genes(strain_vectors):
     """
@@ -235,7 +242,7 @@ def find_once_genes(strain_vectors):
     common_genes = set(strain_vectors[next(iter(strain_vectors))])  # Start with the first strain's genes
     for genes in strain_vectors.values():
         common_genes.intersection_update(genes)
-    
+
     # Check for genes that appear exactly once in each strain
     once_genes = set()
     all_strains_genes = list(strain_vectors.values())
@@ -245,8 +252,9 @@ def find_once_genes(strain_vectors):
     for gene in common_genes:
         if all(genes.count(gene) == 1 for genes in all_strains_genes):
             once_genes.add(gene)
-        
+
     return len(common_genes), len(once_genes), once_genes
+
 
 def reorder_genes_by_strain(strain_vectors, genes, strain_name):
     """
@@ -271,9 +279,10 @@ def reorder_genes_by_strain(strain_vectors, genes, strain_name):
     gene_index_map = {gene: gene_list.index(gene) for gene in gene_list if gene in genes}
 
     # Sort the genes by their index in the strain using the gene_index_map
-    ordered_genes = sorted(genes, key=lambda gene: gene_index_map.get(gene, float('inf')))
+    ordered_genes = sorted(genes, key=lambda gene: gene_index_map.get(gene, float("inf")))
 
     return ordered_genes
+
 
 def rearrange_genes(gene_list, target_gene):
     """
@@ -296,6 +305,7 @@ def rearrange_genes(gene_list, target_gene):
     else:
         # Return the original list if target_gene is not found
         return gene_list
+
 
 def standardize_strain_orders(strain_vectors, consistent_order_genes, reference_strain_name):
     """
@@ -320,20 +330,27 @@ def standardize_strain_orders(strain_vectors, consistent_order_genes, reference_
     count = 0
     strain_vectors_updated = {}
     problem_strains = []
-    
+
     # Adjust each strain to match the reference order
     for strain_name, genes in strain_vectors.items():
         # Reorder genes in the current strain
         current_ordered_genes = reorder_genes_by_strain(strain_vectors, consistent_order_genes, strain_name)
-        current_ordered_genes_1 = rearrange_genes(reorder_genes_by_strain(strain_vectors, consistent_order_genes, strain_name), reference_ordered_genes[0])
-        current_ordered_genes_2 = rearrange_genes(reorder_genes_by_strain(strain_vectors, consistent_order_genes, strain_name), reference_ordered_genes[-1])
-        
+        current_ordered_genes_1 = rearrange_genes(
+            reorder_genes_by_strain(strain_vectors, consistent_order_genes, strain_name), reference_ordered_genes[0]
+        )
+        current_ordered_genes_2 = rearrange_genes(
+            reorder_genes_by_strain(strain_vectors, consistent_order_genes, strain_name), reference_ordered_genes[-1]
+        )
+
         # Check if current order matches the reference order or its reverse
         if current_ordered_genes_1 == reference_ordered_genes or current_ordered_genes_2 == reference_ordered_genes:
             strain_vectors_updated[strain_name] = genes
             count += 1
             continue  # This strain is already correctly ordered
-        elif current_ordered_genes_1 == reference_ordered_genes[::-1] or current_ordered_genes_2 == reference_ordered_genes[::-1]:
+        elif (
+            current_ordered_genes_1 == reference_ordered_genes[::-1]
+            or current_ordered_genes_2 == reference_ordered_genes[::-1]
+        ):
             strain_vectors_updated[strain_name] = genes[::-1]
             count += 1
             continue
@@ -342,6 +359,7 @@ def standardize_strain_orders(strain_vectors, consistent_order_genes, reference_
             continue
 
     return strain_vectors_updated, count, problem_strains, list(strain_vectors_updated.keys())
+
 
 def create_strain_groups(strain_vectors_filtered, once_genes, starting_strain):
     """
@@ -358,21 +376,22 @@ def create_strain_groups(strain_vectors_filtered, once_genes, starting_strain):
     # Initialize variables
     groups = {}
     all_consistent_strains = set()
-    
+
     # Start with the first strain
     current_strain = starting_strain
     group_number = 1
-    
+
     while True:
         # Run the standardization function
         _, _, problem_strains, consistent_strains = standardize_strain_orders(
-            strain_vectors_filtered, once_genes, current_strain)
-        
+            strain_vectors_filtered, once_genes, current_strain
+        )
+
         # Add the group to the dictionary
-        group_key = f'strain_group_{group_number}'
+        group_key = f"strain_group_{group_number}"
         groups[group_key] = consistent_strains
         all_consistent_strains.update(consistent_strains)
-        
+
         # Print the current group and the number of strains it contains
         print(f" {group_key}: {len(consistent_strains)} strains.")
 
@@ -380,7 +399,7 @@ def create_strain_groups(strain_vectors_filtered, once_genes, starting_strain):
         remaining_strains = set(strain_vectors_filtered.keys()) - all_consistent_strains
         if not remaining_strains:
             break  # Exit if there are no more strains to process
-        
+
         # Pick a new strain to use as the next starting point
         next_strain = next(iter(remaining_strains), None)
         if next_strain is None:
@@ -388,8 +407,9 @@ def create_strain_groups(strain_vectors_filtered, once_genes, starting_strain):
 
         current_strain = next_strain
         group_number += 1
-    
+
     return groups
+
 
 def update_strain_vector(reference_ordered_genes, strain_vectors_filtered):
     """
@@ -403,15 +423,18 @@ def update_strain_vector(reference_ordered_genes, strain_vectors_filtered):
     dict: A dictionary with updated strain vectors where genes are replaced by their positions in the reference list.
     """
     gene_mapping = {gene: idx for idx, gene in enumerate(reference_ordered_genes, start=1)}
-    
+
     # Apply the mapping to strain_vectors_filtered, keep unmapped genes unchanged
     updated_strain_vectors = {}
-    
+
     for strain, genes in strain_vectors_filtered.items():
-        updated_genes = [gene_mapping.get(gene, gene) for gene in genes]  # Use .get() to return the gene itself if not found
+        updated_genes = [
+            gene_mapping.get(gene, gene) for gene in genes
+        ]  # Use .get() to return the gene itself if not found
         updated_strain_vectors[strain] = updated_genes
 
     return updated_strain_vectors
+
 
 def adjust_gene_order(strain_vectors):
     """
@@ -423,6 +446,7 @@ def adjust_gene_order(strain_vectors):
     Returns:
     tuple: A dictionary with adjusted gene orders and a count of how many lists were reversed.
     """
+
     # Function to determine if a list is generally decreasing
     def is_generally_decreasing(numbers):
         decreasing_count = sum(x > y for x, y in zip(numbers, numbers[1:] + [numbers[0]]))
@@ -442,6 +466,7 @@ def adjust_gene_order(strain_vectors):
         final_strain_vectors[strain] = genes
 
     return final_strain_vectors, reversed_count
+
 
 def reorder_to_start_with_one(strain_vectors):
     """
@@ -472,6 +497,7 @@ def reorder_to_start_with_one(strain_vectors):
 
     return strain_vectors_final, count_changed
 
+
 def check_strict_sequence(strain_vectors):
     """
     Checks if the gene numbers in each strain vector follow a strict sequence [1, 2, 3, ..., max] without any gaps.
@@ -486,7 +512,7 @@ def check_strict_sequence(strain_vectors):
     results = {}
     count_true = 0
     count_false = 0
-    
+
     for strain, genes in strain_vectors.items():
         # Extract only integer entries from the genes list
         numbers = [x for x in genes if isinstance(x, int)]
@@ -497,8 +523,9 @@ def check_strict_sequence(strain_vectors):
         else:
             results[strain] = False
             count_false += 1
-            
+
     return results, count_true, count_false
+
 
 def generate_gene_names(strain_vectors):
     """
@@ -508,11 +535,11 @@ def generate_gene_names(strain_vectors):
     strain_vectors (dict): A dictionary where keys are strain identifiers and values are lists of genes.
 
     Returns:
-    DataFrame: A DataFrame where rows are genes and columns are strains, 
+    DataFrame: A DataFrame where rows are genes and columns are strains,
                with cells containing the descriptive gene names.
     """
     gene_names = {}
-    
+
     for strain, genes in strain_vectors.items():
         # Find indices and values of numerical markers
         number_indices = [i for i, g in enumerate(genes) if isinstance(g, int)]
@@ -520,40 +547,41 @@ def generate_gene_names(strain_vectors):
         # Assume circular nature
         number_indices = number_indices + [len(genes) + ni for ni in number_indices]
         number_values = number_values + number_values
-        
+
         # Temporary storage for gene names of the current strain
         current_names = {}
-        
+
         for i in range(len(genes)):
             if not isinstance(genes[i], int):  # Process if it's a gene identifier
                 # Find the closest previous and next numbers
                 previous_number_index = max([ni for ni in number_indices if ni < i])
                 next_number_index = min([ni for ni in number_indices if ni > i])
-                
+
                 previous_number = genes[previous_number_index % len(genes)]
                 next_number = genes[next_number_index % len(genes)]
-                
+
                 # Count the genes between the numbers including this one
                 count_before = i - previous_number_index
                 count_after = next_number_index - i
-                
+
                 # Form the new gene name
                 gene_name = f"{previous_number}_{count_before}_{count_after}_{next_number}"
                 current_names[genes[i]] = gene_name
-        
+
         # Store names with respect to their original gene identifier
         gene_names[strain] = current_names
-    
+
     # Create a DataFrame from the dictionary
     all_genes = sorted(set(g for names in gene_names.values() for g in names if isinstance(g, str)))
     df = pd.DataFrame(index=all_genes, columns=strain_vectors.keys())
-    
+
     for strain, names in gene_names.items():
         for gene, name in names.items():
             if gene in df.index:  # Ensure the gene is part of the index
                 df.at[gene, strain] = name
-    
-    return df.fillna('NA')
+
+    return df.fillna("NA")
+
 
 def count_genes_between_anchor_genes(df, strain):
     """
@@ -567,27 +595,28 @@ def count_genes_between_anchor_genes(df, strain):
     DataFrame: A DataFrame where rows are anchor gene pairs and columns are the counts of genes between them.
     """
     # Extract the column for the strain and remove NA values
-    column_data = pd.DataFrame(df[strain][df[strain] != 'NA']).reset_index().rename(columns={'index': 'Gene'})
+    column_data = pd.DataFrame(df[strain][df[strain] != "NA"]).reset_index().rename(columns={"index": "Gene"})
 
     # Extract number pairs and initialize count dictionary
     counts = {}
-    
+
     for entry in column_data[strain]:
-        parts = entry.split('_')
+        parts = entry.split("_")
         if len(parts) == 4:
             number_before = parts[0]
             number_after = parts[3]
-            
+
             key = f"{number_before}-{number_after}"
             if key not in counts:
                 counts[key] = 0
             counts[key] += 1
-  
+
     # Convert the dictionary to a DataFrame sorted by the number pairs
     result_data = [(key, value) for key, value in sorted(counts.items(), key=lambda x: x[0])]
-    result_df = pd.DataFrame(result_data, columns=['Anchor Genes', 'Total Genes Between'])
+    result_df = pd.DataFrame(result_data, columns=["Anchor Genes", "Total Genes Between"])
 
     return result_df
+
 
 def create_gene_count_between_anchor_genes_for_all(df):
     """
@@ -597,7 +626,7 @@ def create_gene_count_between_anchor_genes_for_all(df):
     df (DataFrame): A DataFrame where rows are genes and columns are strains, with cells containing descriptive gene names.
 
     Returns:
-    dict: A dictionary where keys are strain identifiers and values are DataFrames 
+    dict: A dictionary where keys are strain identifiers and values are DataFrames
           containing the counts of genes between anchor genes for each strain.
     """
     result_dict = {}
@@ -605,6 +634,7 @@ def create_gene_count_between_anchor_genes_for_all(df):
         gene_count_between_anchor_genes = count_genes_between_anchor_genes(df, column)
         result_dict[column] = gene_count_between_anchor_genes
     return result_dict
+
 
 def identify_variation(numbers, ordered_numbers):
     """
@@ -618,15 +648,15 @@ def identify_variation(numbers, ordered_numbers):
     str: The type of variation ('no variation', 'inversion', 'translocation', 'others').
     """
     if numbers == ordered_numbers:
-        return 'no variation'
-    
+        return "no variation"
+
     n = len(numbers)
     visited = [False] * n
     for i in range(n):
         if visited[i] or numbers[i] == ordered_numbers[i]:
             visited[i] = True
             continue
-        
+
         # Start of a segment
         segment_original = []
         segment_ordered = []
@@ -636,13 +666,14 @@ def identify_variation(numbers, ordered_numbers):
             segment_ordered.append(ordered_numbers[pos])
             visited[pos] = True
             pos = numbers.index(ordered_numbers[pos])
-        
+
         if segment_original == segment_ordered[::-1]:
-            return 'inversion'
+            return "inversion"
         elif sorted(segment_original) != segment_ordered:
-            return 'translocation'
-    
-    return 'others'
+            return "translocation"
+
+    return "others"
+
 
 def identify_genetic_variation(strain_vectors):
     """
@@ -655,41 +686,43 @@ def identify_genetic_variation(strain_vectors):
     DataFrame: A DataFrame where each row represents a strain and its identified variation type.
     """
     results = []
-    
+
     for strain, genes in strain_vectors.items():
         numbers = [x for x in genes if isinstance(x, int)]
         if not numbers:
             continue
         ordered_numbers = list(range(min(numbers), max(numbers) + 1))
-        
+
         variation_type = identify_variation(numbers, ordered_numbers)
         results.append([strain, variation_type])
-    
+
     # Create DataFrame
-    result_df = pd.DataFrame(results, columns=['Strain', 'Variation'])
+    result_df = pd.DataFrame(results, columns=["Strain", "Variation"])
 
     # Print the count of each category
-    print(result_df['Variation'].value_counts())
-    
+    print(result_df["Variation"].value_counts())
+
     return result_df
+
 
 def find_full_matches(phylon_strain_groups_counts, strain_groups):
     # This will store the matching (row index, column index) pairs
     full_matches = []
-    
+
     # Iterate over the columns (strain groups) in the DataFrame
     for group in phylon_strain_groups_counts.columns:
         # Get the number of strains in the current group from strain_vectors_final
         group_strain_count = len(strain_groups[group])
-        
+
         # Find rows where the count matches the total number of strains in this group
         matching_phylons = phylon_strain_groups_counts[phylon_strain_groups_counts[group] == group_strain_count].index
-        
+
         # Collect the (index, column) pairs
         for phylon in matching_phylons:
             full_matches.append((phylon, group, group_strain_count))
-    
+
     return full_matches
+
 
 def filter_genes_and_strains(gene_mapping_to_anchor_genes, L_binarized, A_binarized, phylon):
     gene_list = list(L_binarized[phylon][L_binarized[phylon] == 1].index)
@@ -698,30 +731,32 @@ def filter_genes_and_strains(gene_mapping_to_anchor_genes, L_binarized, A_binari
     filtered_df = gene_mapping_to_anchor_genes.loc[gene_list, strain_list]
     return filtered_df
 
+
 def count_strain_groups(strain_groups, A_binarized):
     # Initialize an empty DataFrame with the same index as A_binarized and columns based on the keys of strain_vectors_final
     result_df = pd.DataFrame(index=A_binarized.index, columns=strain_groups.keys())
-    
+
     # Iterate over each strain group to calculate the counts
     for group, strains in strain_groups.items():
         # Find the intersection of strains that are both in the strain group and in A_binarized
         common_strains = list(set(strains).intersection(A_binarized.columns))
-        
+
         # Sum across these strains only if they are present (1) in A_binarized
         result_df[group] = A_binarized[common_strains].apply(lambda row: row[row == 1].count(), axis=1)
-        
+
     return result_df
+
 
 def genes_between_anchors(df, anchor1, anchor2):
     result = {}
-    
+
     # Iterate through each column (strain)
     for strain, series in df.items():
         # Parse the gene location info and filter by anchors
         for gene, location in series.items():
             # Check if location is not NaN and not 'NA'
-            if pd.notna(location) and location != 'NA':
-                parts = location.split('_')
+            if pd.notna(location) and location != "NA":
+                parts = location.split("_")
                 if len(parts) == 4:
                     start_anchor, num_genes_after, _, end_anchor = parts
                     # Check if the gene is between the specified anchor genes
@@ -730,8 +765,9 @@ def genes_between_anchors(df, anchor1, anchor2):
 
     # Create a sorted list of genes based on the number of genes after the first anchor gene
     sorted_genes = sorted(result, key=result.get)
-    
+
     return sorted_genes
+
 
 def genes_in_strain_between_anchors(df, strain, anchor1, anchor2):
     if strain not in df:
@@ -743,8 +779,8 @@ def genes_in_strain_between_anchors(df, strain, anchor1, anchor2):
     # Parse the gene location info and filter by anchors
     for gene, location in series.items():
         # Check if location is not NaN and not 'NA'
-        if pd.notna(location) and location != 'NA':
-            parts = location.split('_')
+        if pd.notna(location) and location != "NA":
+            parts = location.split("_")
             if len(parts) == 4:
                 start_anchor, num_genes_after, _, end_anchor = parts
                 if int(start_anchor) == anchor1 and int(end_anchor) == anchor2:
@@ -752,8 +788,9 @@ def genes_in_strain_between_anchors(df, strain, anchor1, anchor2):
 
     # Create a sorted list of genes based on the number of genes after the first anchor gene
     sorted_genes = sorted(result, key=result.get)
-    
+
     return sorted_genes
+
 
 def count_anchor_gene_pairs(phylon_location):
     # Initialize a dictionary to store the counts for each gene
@@ -767,11 +804,11 @@ def count_anchor_gene_pairs(phylon_location):
         # Iterate over each strain (column) to extract the anchor genes
         for strain in phylon_location.columns:
             value = phylon_location.loc[gene, strain]
-            if pd.isna(value) or value == 'NA':
+            if pd.isna(value) or value == "NA":
                 continue  # Skip NaN and 'NA' values
 
             # Split the value to extract anchor genes
-            anchor_1, _, _, anchor_2 = map(int, value.split('_'))
+            anchor_1, _, _, anchor_2 = map(int, value.split("_"))
 
             # Add both possible anchor gene pairs to the set (order doesn't matter)
             anchor_pairs.add((min(anchor_1, anchor_2), max(anchor_1, anchor_2)))
@@ -780,26 +817,27 @@ def count_anchor_gene_pairs(phylon_location):
         gene_pair_counts[gene] = len(anchor_pairs)
 
     # Create a new DataFrame with the counts
-    count_df = pd.DataFrame.from_dict(gene_pair_counts, orient='index', columns=['Number of possible location'])
+    count_df = pd.DataFrame.from_dict(gene_pair_counts, orient="index", columns=["Number of possible location"])
 
     # Remove rows with 0 possibilities
-    count_df = count_df[count_df['Number of possible location'] > 0]
+    count_df = count_df[count_df["Number of possible location"] > 0]
 
-    return count_df.sort_values(by='Number of possible location', ascending=False)
+    return count_df.sort_values(by="Number of possible location", ascending=False)
+
 
 def unique_genes_by_phylon(df: pd.DataFrame) -> dict:
-    '''
+    """
     This function identifies unique genes for each phylon in a L_binarized.
 
     Parameters:
-    df (pd.DataFrame, L_binarized): A dataframe where columns are phylon names, 
-                       row indices are gene names, 
+    df (pd.DataFrame, L_binarized): A dataframe where columns are phylon names,
+                       row indices are gene names,
                        and values are 1 or 0 indicating the presence of the gene in the phylon.
 
     Returns:
-    dict: A dictionary where keys are phylon names and values are lists of genes 
+    dict: A dictionary where keys are phylon names and values are lists of genes
           that are unique to each phylon.
-    '''
+    """
     unique_genes = {}
 
     # Iterate through each phylon (column)
@@ -811,4 +849,3 @@ def unique_genes_by_phylon(df: pd.DataFrame) -> dict:
         unique_genes[phylon] = [gene for gene in genes_in_phylon if df.loc[gene].sum() == 1]
 
     return unique_genes
-
