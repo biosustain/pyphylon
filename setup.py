@@ -19,12 +19,9 @@ setup(
         "matplotlib",
         "seaborn",
         "plotly",
-        "umap-learn",
         "hdbscan",
         "prince",
-    ],
-    dependency_links=[
-        "git+https://github.com/georg-un/kneebow.git#egg=kneebow",
+        "kneebow @ git+https://github.com/georg-un/kneebow.git#egg=kneebow",
     ],
     classifiers=[
         "Programming Language :: Python :: 3",

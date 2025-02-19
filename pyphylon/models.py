@@ -13,7 +13,6 @@ from pyexpat import model
 from sklearn.cluster import KMeans
 from sklearn.decomposition import NMF
 from sklearn.metrics import confusion_matrix, silhouette_score
-from umap import UMAP
 
 from pyphylon.util import _get_normalization_diagonals
 
@@ -207,6 +206,8 @@ def run_densmap(data: pd.DataFrame, low_memory: bool = False, n_neighbors: int =
     - densmap (UMAP): A DensMAP model object fitted to data.
     - embedding (pd.DataFrame): A DataFrame of the reduced embedding.
     """
+    from umap import UMAP
+
     if n_neighbors:
         n_neighbors = _check_n_neighbors(data, n_neighbors)
     else:
