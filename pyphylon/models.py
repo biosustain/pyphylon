@@ -712,7 +712,7 @@ def _k_means_binarize_L(L_norm):
     L_binarized = np.zeros_like(L_norm.values)
 
     # Loop through each column
-    for col_idx in range(L_norm.values.shape[1], leave=False, desc="binarizing column by column..."):
+    for col_idx in range(L_norm.values.shape[1]):
         column_data = L_norm.values[:, col_idx]
 
         # Reshape the column data to fit the KMeans input shape
@@ -746,7 +746,7 @@ def _k_means_binarize_A(A_norm):
     A_binarized = np.zeros_like(A_norm.values)
 
     # Loop through each row
-    for row_idx in range(A_norm.values.shape[0], leave=False, desc="binarizing row by row..."):
+    for row_idx in range(A_norm.values.shape[0]):
         row_data = A_norm.values[row_idx, :]
 
         # Reshape the row data to fit the KMeans input shape
