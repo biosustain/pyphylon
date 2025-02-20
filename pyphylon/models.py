@@ -97,7 +97,7 @@ def run_nmf(data: Union[np.ndarray, pd.DataFrame], ranks: List[int], max_iter: i
     for rank in ranks:
         model = NMF(n_components=rank, init="nndsvd", max_iter=max_iter, random_state=42)
 
-        logger.debug(f"Fitting NMF model for rank {rank}")
+        logger.info(f"Fitting NMF model for rank {rank}")
         W = model.fit_transform(data)
         H = model.components_
         W_dict[rank] = W
