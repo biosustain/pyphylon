@@ -7,7 +7,6 @@ from typing import Any, Dict, Iterable, List, Optional, Tuple, Union
 
 import numpy as np
 import pandas as pd
-from hdbscan import HDBSCAN
 from prince import MCA
 from pyexpat import model
 from sklearn.cluster import KMeans

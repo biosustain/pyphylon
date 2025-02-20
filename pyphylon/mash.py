@@ -2,9 +2,6 @@
 Functions for running Mash analysis.
 """
 
-import logging
-import subprocess
-
 import numpy as np
 import pandas as pd
 import scipy.cluster.hierarchy as hc
