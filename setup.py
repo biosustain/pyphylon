@@ -16,7 +16,6 @@ setup(
         "scipy",
         "scikit-learn",
         "biopython",
-        "hdbscan",
         "prince",
         "kneebow @ git+https://github.com/georg-un/kneebow.git#egg=kneebow",
     ],
@@ -25,6 +24,5 @@ setup(
         "License :: OSI Approved :: MIT License",
         "Operating System :: OS Independent",
     ],
-    extras_require={"cd-hit": ["cd-hit"]},
     python_requires=">=3.11",
 )

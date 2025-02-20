@@ -3,15 +3,14 @@ Functions for handling dimension-reduction models of pangenome data.
 """
 
 import logging
-from typing import Any, Dict, Iterable, List, Optional, Tuple, Union
+from typing import Dict, List, Tuple, Union
 
 import numpy as np
 import pandas as pd
 from prince import MCA
-from pyexpat import model
 from sklearn.cluster import KMeans
 from sklearn.decomposition import NMF
-from sklearn.metrics import confusion_matrix, silhouette_score
+from sklearn.metrics import confusion_matrix
 
 from pyphylon.util import _get_normalization_diagonals
 
