@@ -37,24 +37,26 @@ def sensitivity_analysis(df_mash_corr_dist_complete):
 
         return len(clst.cluster.unique())
 
-    tmp = pd.DataFrame()
-    tmp["threshold"] = pd.Series(x)
-    tmp["num_clusters"] = pd.Series(x).apply(num_uniq_clusters)
+    thresh_v_n_clusters_df = pd.DataFrame()
+    thresh_v_n_clusters_df["threshold"] = pd.Series(x)
+    thresh_v_n_clusters_df["num_clusters"] = pd.Series(x).apply(num_uniq_clusters)
 
     # Find which value the elbow corresponds to
-    df_temp = tmp.sort_values(by="num_clusters", ascending=True).reset_index(drop=True)
+    thresh_v_n_clusters_sorted_df = thresh_v_n_clusters_df.sort_values(by="num_clusters", ascending=True).reset_index(
+        drop=True
+    )
 
     # transform input into form necessary for package
-    results_itr = zip(list(df_temp.index), list(df_temp.num_clusters))
+    results_itr = zip(list(thresh_v_n_clusters_sorted_df.index), list(thresh_v_n_clusters_sorted_df.num_clusters))
     data = list(results_itr)
 
     rotor = Rotor()
     rotor.fit_rotate(data)
     elbow_idx = rotor.get_elbow_index()
-    df_temp["num_clusters"][elbow_idx]
+    thresh_v_n_clusters_sorted_df["num_clusters"][elbow_idx]
 
     # Grab elbow threshold
-    cond = tmp["num_clusters"] == df_temp["num_clusters"][elbow_idx]
-    elbow_threshold = tmp[cond]["threshold"].iloc[0]
+    cond = thresh_v_n_clusters_df["num_clusters"] == thresh_v_n_clusters_sorted_df["num_clusters"][elbow_idx]
+    elbow_threshold = thresh_v_n_clusters_df[cond]["threshold"].iloc[0]
 
-    return tmp, df_temp, elbow_idx, elbow_threshold
+    return thresh_v_n_clusters_sorted_df, elbow_idx, elbow_threshold
