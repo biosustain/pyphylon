@@ -3,6 +3,7 @@ Functions for handling dimension-reduction models of pangenome data.
 """
 
 import logging
+from traceback import format_exc
 from typing import Dict, List, Tuple, Union
 
 import numpy as np
@@ -130,8 +131,8 @@ def normalize_nmf_outputs(
         except KeyError:
             logging.warning(f"Rank {rank} not found in H_dict. Skipping...")  # TODO: update to long-form logging
         except ValueError as e:
-            logging.error(f"Error normalizing matrices for rank {rank}: {str(e)}")  # TODO: update to long-form logging
-            raise
+            logging.error(f"Error normalizing matrices for rank {rank}:\n{format_exc()}\nThe exception above occured for rank {rank} and will be ignored")
+
     return L_norm_dict, A_norm_dict
 
 
@@ -149,8 +150,11 @@ def binarize_nmf_outputs(L_norm_dict, A_norm_dict):
     """
     L_binarized_dict, A_binarized_dict = {}, {}
     for rank in L_norm_dict:
-        L_binarized_dict[rank] = _k_means_binarize_L(L_norm_dict[rank])
-        A_binarized_dict[rank] = _k_means_binarize_A(A_norm_dict[rank])
+        try:
+            L_binarized_dict[rank] = _k_means_binarize_L(L_norm_dict[rank])
+            A_binarized_dict[rank] = _k_means_binarize_A(A_norm_dict[rank])
+        except ValueError:
+            logging.error(f"Error binarizing matrices for rank {rank}:\n{format_exc()}\nThe exception above occured for rank {rank} and will be ignored")
     return L_binarized_dict, A_binarized_dict
 
 
