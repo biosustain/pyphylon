@@ -1,4 +1,4 @@
-# pyphylon
+# pyphylon (Biosustain)
 
 This a fork of [pyphylon](https://github.com/SBRG/pyphylon) to be used as an installable python package for the BGCFlow pipeline with the goal of displaying phylons in [PanKB](https://github.com/biosustain/pankb).
 
